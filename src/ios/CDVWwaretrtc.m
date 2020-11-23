@@ -13,7 +13,10 @@
   if(sdkappid && ![sdkappid isEqualToString:self.sdkappid]){
     self.sdkappid = sdkappid;
   }
+  [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(enterroomACallback) name:@"Aviewsdissappear" object:nil];
+  [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(enterroomVCallback) name:@"Vviewsdissappear" object:nil];
 }
+
 
 #pragma mark -测试
 - (void)testing:(CDVInvokedUrlCommand*)command
@@ -45,7 +48,7 @@
         [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
         return;
     }
-    NSLog(@"data:%@",data);
+    //NSLog(@"data:%@",data);
     self->onFinishedCallbackId = command.callbackId;
 
     // TRTC相关参数设置
@@ -54,7 +57,7 @@
     param.userId = (NSString*)[data objectForKey: @"userid"];
     param.roomId = (UInt32)[(NSString*)[data objectForKey: @"roomid"] intValue];
     NSString *paramUsersig = [data objectForKey: @"usersig"];
-    int totaltime=[[data objectForKey: @"totaltime"] intValue]*60;
+    int totaltime=[[data objectForKey: @"estimatetime"] intValue]*60;
     NSString *roomtype = [data objectForKey:@"roomtype"];
 
     if(paramUsersig != nil && paramUsersig.length>0){
@@ -99,12 +102,39 @@
        }];
         
     }
-       
+     
         
 }
+-(void)enterroomACallback{
+    NSMutableDictionary* result = [NSMutableDictionary dictionaryWithCapacity:0];
+    //[result setDictionary:values];
+    [result setObject:@(true) forKey:@"success"];
+   
+    pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:result];
+
+    [self.commandDelegate sendPluginResult:pluginResult callbackId:self->onFinishedCallbackId];
+}
+
+-(void)enterroomVCallback{
+    NSMutableDictionary* result = [NSMutableDictionary dictionaryWithCapacity:0];
+    //[result setDictionary:values];
+    [result setObject:@(true) forKey:@"success"];
+   
+    pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:result];
+
+    [self.commandDelegate sendPluginResult:pluginResult callbackId:self->onFinishedCallbackId];
+}
+
 -(void)checkPermission:(CDVInvokedUrlCommand*)command
 {
+    NSMutableDictionary* result = [NSMutableDictionary dictionaryWithCapacity:0];
+    //[result setDictionary:values];
+    [result setObject:@(true) forKey:@"success"];
+   
+    pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:result];
 
+    [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId]; 
+   
 }
 
 @end

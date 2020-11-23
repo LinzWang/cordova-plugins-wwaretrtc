@@ -8,6 +8,10 @@
   NSLog(@"viewWillAppear");
 }
 
+-(void)viewWillDissappear:(BOOL)animated{
+
+     [[NSNotificationCenter defaultCenter] postNotificationName:@"Vviewsdissappear" object:nil];
+}
 /**
  * 检查当前APP是否已经获得摄像头和麦克风权限，没有获取边提示用户开启权限
  */
