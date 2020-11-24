@@ -279,7 +279,7 @@ public class AudioActivity extends Activity  {
         public void onEnterRoom(long result){
             //String tips = "等待对方进入咨询室";
             //mTips.setText(tips);
-            RTCActivity activity = mContext.get();
+            AudioActivity activity = mContext.get();
           if(result > 0){
             Toast.makeText(activity, "欢迎来到咨询室！" , Toast.LENGTH_SHORT).show();
           }
@@ -289,7 +289,7 @@ public class AudioActivity extends Activity  {
         public void onRemoteUserEnterRoom(String userId){
             //String tips = "对方进入咨询室，即将开始通话！";
             //mTips.setText(tips);
-          RTCActivity activity = mContext.get();
+          AudioActivity activity = mContext.get();
           
           Toast.makeText(activity, "对方进入咨询室，即将开始通话！" , Toast.LENGTH_SHORT).show();
          
@@ -304,7 +304,7 @@ public class AudioActivity extends Activity  {
             }else {
                 tips = "对方已退出咨询室！";
             }
-            RTCActivity activity = mContext.get();
+            AudioActivity activity = mContext.get();
             
             Toast.makeText(activity, tips , Toast.LENGTH_SHORT).show();
                         
@@ -314,7 +314,7 @@ public class AudioActivity extends Activity  {
         public void onUserAudioAvailable(String userId, boolean avaliable) {
             //super.onUserAudioAvailable(userId, avaliable);
             //Log.i(TAG,"AUDIOLOGTEST:onUserAudioAvailable");
-            RTCActivity activity = mContext.get();
+            AudioActivity activity = mContext.get();
                
             if(avaliable){
                 mTips.setVisibility(View.GONE);

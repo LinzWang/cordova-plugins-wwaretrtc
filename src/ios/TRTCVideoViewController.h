@@ -11,6 +11,8 @@ typedef enum : NSUInteger {
     TRTC_ENTERED,    // SDK 视频通话进行中
 } TRTCStatus;
 
+typedef void(^HangUpCallback)(void);
+
 @interface TRTCVideoViewController : UIViewController  <
 UITextFieldDelegate,
 TRTCCloudDelegate>
@@ -50,5 +52,6 @@ TRTCCloudDelegate>
 @property (nonatomic) NSInteger toastMsgCount;
 @property (nonatomic) CGFloat toastMsgHeight;
 @property (nonatomic) int totaltime;
+@property HangUpCallback onHangUp;
 
 @end

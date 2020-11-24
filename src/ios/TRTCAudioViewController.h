@@ -7,6 +7,7 @@
 #import <TXLiteAVSDK_TRTC/TRTCCloudDelegate.h>
 #import "TRTCVideoViewController.h"
 
+
 @interface TRTCAudioViewController : UIViewController  <
 UITextFieldDelegate,
 TRTCCloudDelegate>
@@ -50,5 +51,6 @@ TRTCCloudDelegate>
 @property (nonatomic) int totaltime;
 @property (nonatomic, copy) NSString *guestimg;
 @property (nonatomic, copy) NSString *guestname;
+@property HangUpCallback onHangUp;
 
 @end

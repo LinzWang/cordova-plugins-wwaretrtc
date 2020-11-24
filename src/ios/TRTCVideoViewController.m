@@ -348,6 +348,9 @@
 }
 
 -(void)clickBack{
+    if (self.onHangUp != nil) {
+        self.onHangUp();
+    }
     [self dismissViewControllerAnimated:true completion:nil];
 }
 

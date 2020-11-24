@@ -10,6 +10,7 @@
     TRTCVideoViewController *controller;
 }
 
+
 @property (nonatomic, strong) NSString* callbackID;
 @property (nonatomic, strong) NSString* sdkappid;
 
