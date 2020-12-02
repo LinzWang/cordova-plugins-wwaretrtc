@@ -4,14 +4,14 @@
 
 @implementation TRTCAudioViewController
 
--(void)viewWillAppear:(BOOL)animated{
+/*-(void)viewWillAppear:(BOOL)animated{
   NSLog(@"viewWillAppear");
 }
 
 -(void)viewWillDissappear:(BOOL)animated{
 
-     [[NSNotificationCenter defaultCenter] postNotificationName:@"Aviewsdissappear" object:nil];
-}
+     //[[NSNotificationCenter defaultCenter] postNotificationName:@"Aviewsdissappear" object:nil];
+}*/
 
 /**
  * 检查当前APP是否已经获得摄像头和麦克风权限，没有获取边提示用户开启权限
@@ -67,7 +67,9 @@
     _mainViewUserId = @"";
     _toastMsgCount = 0;
     _toastMsgHeight = 0;
-    
+    _firstenter = NO;
+    _connected = YES;
+    _closeMic = NO;
     // 初始化 UI 控件
     [self initUI];
     
@@ -292,12 +294,16 @@
     
 }
 
+-(void)stopConnect{
+    [_trtc stopLocalAudio];
+}
 /**
  * 退出房间，并且退出该页面
  */
 - (void)exitRoom {
-    
-   
+    //NSLog(@"===============================exitRoom===================");
+    [self dismissViewControllerAnimated:true completion:nil];
+
     [_trtc exitRoom];
     
 	[self setRoomStatus:TRTC_IDLE];
@@ -347,9 +353,14 @@
  * 点击关闭或者打开本地的音频上行
  */
 - (void)clickMute {
-    _muteSwitch = !_muteSwitch;
-    [_trtc muteLocalAudio:_muteSwitch];
-    [_btnAudioMute setImage:[UIImage imageNamed:(_muteSwitch ? @"rtc_mic_off" : @"rtc_mic_on")] forState:UIControlStateNormal];
+    if(_closeMic){
+        [self toastTip:@"无法双方均关闭麦克风"];
+    }else{
+        _muteSwitch = !_muteSwitch;
+        [_trtc muteLocalAudio:_muteSwitch];
+        [_btnAudioMute setImage:[UIImage imageNamed:(_muteSwitch ? @"rtc_mic_off" : @"rtc_mic_on")] forState:UIControlStateNormal];
+      
+    }
 }
 
 /*
@@ -361,10 +372,12 @@
 }
 
 -(void)clickBack{
+
+    //NSLog(@"===============================clickBack===================");
     if (self.onHangUp != nil) {
         self.onHangUp();
     }
-    [self dismissViewControllerAnimated:true completion:nil];
+    [self exitRoom];
 }
 
 
@@ -392,7 +405,7 @@
 
 - (void)onEnterRoom:(NSInteger)result {
     if (result >= 0) {
-        NSString *msg = [NSString stringWithFormat:@"[%@]进入咨询室", _selfUserID];
+        NSString *msg = [NSString stringWithFormat:@"欢迎来到咨询室"];
         [self toastTip:msg];
         [self setRoomStatus:TRTC_ENTERED];
         
@@ -406,18 +419,18 @@
 }
 
 -(void)onRemoteUserEnterRoom:(NSString *)userId{
-    NSString *msg = [NSString stringWithFormat:@"[%@]进入咨询室", userId];
+    NSString *msg = [NSString stringWithFormat:@"对方进入咨询室", userId];
     [self toastTip:msg];
     
 }
 -(void)onRemoteUserLeaveRoom:(NSString *)userId reason:(NSInteger)reason{
-    NSString *msg = [NSString stringWithFormat:@"[%@]离开咨询室", userId];
+    NSString *msg = [NSString stringWithFormat:@"对方离开咨询室", userId];
     [self toastTip:msg];
     
 }
 
 - (void)onExitRoom:(NSInteger)reason {
-    NSString *msg = [NSString stringWithFormat:@"咨询师已离开咨询室"];
+    NSString *msg = [NSString stringWithFormat:@"离开咨询室"];
     [self toastTip:msg];
 }
 
@@ -428,17 +441,24 @@
     NSLog(@"onUserAudioAvailable:userId:%@ alailable:%u", userId, available);
     
     if (available) {
-        // 启动远程画面的解码和显示逻辑，FillMode 可以设置是否显示黑边
+        // 第一次进入才初始化并启用倒计时显示
         _mainViewUserId = userId;
-        
+        _closeMic = NO;
        // [self.view addSubview:_remoteView];
        // [_localView sendSubviewToBack:_remoteView];
         //[_trtc startRemoteView:userId view:_remoteView];
         //[self relayout];
-        [self updateTips];
+       if(!_firstenter){
+         [self updateTips];
+       } 
     }
     else {
         //[_trtc stopRemoteView:userId];
+        _closeMic = YES;
+        if(_connected){
+            [self toastTip:@"对方已静音"];    
+        }
+        
     }
     
 }
@@ -455,36 +475,46 @@
        // [_localView sendSubviewToBack:_remoteView];
         //[_trtc startRemoteView:userId view:_remoteView];
         //[self relayout];
-        [self updateTips];
+        //[self updateTips];
     }
     else {
         //[_trtc stopRemoteView:userId];
     }
-        
-     
     
     NSLog(@"onUserVideoAvailable:userId:%@ alailable:%u", userId, available);
     
 }
 
 -(void)updateTips{
+    self->_firstenter = YES;
     __block int timeout=self.totaltime; //倒计时时间
     dispatch_queue_t queue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0);
     dispatch_source_t _timer = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0,queue);
     dispatch_source_set_timer(_timer,dispatch_walltime(NULL, 0),1.0*NSEC_PER_SEC, 0); //每秒执行
     dispatch_source_set_event_handler(_timer, ^{
         if(timeout<=0){ //倒计时结束，关闭
-                dispatch_source_cancel(_timer);
-                //dispatch_release(_timer);
-                dispatch_async(dispatch_get_main_queue(), ^{
-                    //设置界面的按钮显示 根据自己需求设置
-                    self->_expireTimeLabel.text=@"通话时间为0，结束通话！";
-                });
+            dispatch_source_cancel(_timer);
+            //dispatch_release(_timer);
+            dispatch_async(dispatch_get_main_queue(), ^{
+                //设置界面的按钮显示 根据自己需求设置
+                self->_expireTimeLabel.text=@"通话时间为0，结束通话！";
+                [self clickBack];
+            });
+            //NSLog(@"===============================stop by timeout===================");
+            
         }else{
+            
             int minutes = timeout / 60;
             int seconds = timeout % 60;
             NSString *strTime = [NSString stringWithFormat:@"剩余时间：%02d:%02d",minutes, seconds];
             dispatch_async(dispatch_get_main_queue(), ^{
+                if(timeout == 300){
+                    [self toastTip:@"通话时间剩余5分钟"];
+                }
+                if(timeout == 60){
+                    [self toastTip:@"通话时间剩余1分钟"];
+                    self->_connected = NO;
+                }
                 //设置界面的按钮显示 根据自己需求设置
                 self->_expireTimeLabel.text = strTime;
             });

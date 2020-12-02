@@ -38,6 +38,10 @@ TRTCCloudDelegate>
     BOOL                     _videoMuted;
     BOOL                     _muteSwitch;
     BOOL                     _handfree;
+    BOOL                     _firstenter;
+    BOOL                     _connected;
+    BOOL                     _closeCamera;
+    BOOL                     _closeMic;
     CGFloat                  _dashboardTopMargin;
 }
 

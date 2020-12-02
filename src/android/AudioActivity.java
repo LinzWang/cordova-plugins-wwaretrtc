@@ -7,6 +7,7 @@ import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
 import android.view.Window;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -71,15 +72,20 @@ public class AudioActivity extends Activity  {
     private String                          mGuestImg;
     private String                          mGuestName;
     private String                          errorMsg;
-
+    private boolean                         firstEnter;
+    private boolean                         connected;
+    private boolean                         closeMic;
+    private Timer                           mtimer;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         setContentView(wwaretrtc.getResourceId("activity_audio","layout"));
         //getSupportActionBar().hide(); // work on AppCompatActivity
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON); 
         handleIntent();
-
+        firstEnter = false;
+        connected = true;
         // 进入房间代表之前申请过权限
         initView();
         enterRoom();
@@ -137,16 +143,23 @@ public class AudioActivity extends Activity  {
             String tmpstr = mUsername+"的咨询室";
             mTitleText.setText(tmpstr);
         }
-        mNickName.setText(mGuestName);*/
+        */
+        mNickName.setText(mGuestName);
 
         Glide.with(this).load(mGuestImg).into(mHeadPicture);
-
+        Activity that = this;
         mBackButton.setOnClickListener(view -> {
-            finish();
+            exitRoom();
+            //finish();
             //Toast.makeText((RTCActivity)this,"test",Toast.LENGTH_SHORT).show();
         });
         mMuteAudio.setOnClickListener(view -> {
-            muteAudio();
+            if(closeMic){
+                Toast.makeText(this,"无法双方均关闭麦克风",Toast.LENGTH_SHORT).show();
+            }else{
+              muteAudio();  
+            }
+            
             //Toast.makeText((RTCActivity)this,"test",Toast.LENGTH_SHORT).show();
         });
         mHandfree.setOnClickListener(view->{
@@ -186,8 +199,10 @@ public class AudioActivity extends Activity  {
     }
     @Override
     protected void onDestroy() {
+        mtimer.cancel();
         super.onDestroy();
-        exitRoom();
+        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        //exitRoom();
     }
     /*
     * 中断本地推送及远程接收
@@ -217,7 +232,7 @@ public class AudioActivity extends Activity  {
         }
         mTRTCCloud = null;
         TRTCCloud.destroySharedInstance();
-        //finish();
+        finish();
     }
     /*@Override
     public void onClick(View v) {
@@ -317,13 +332,20 @@ public class AudioActivity extends Activity  {
             AudioActivity activity = mContext.get();
                
             if(avaliable){
+                closeMic = false;
                 mTips.setVisibility(View.GONE);
                 SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS");
                 startTime = sdf.format(new Date());
-                controltips();
+                if(!firstEnter){
+                    controltips();
+                }
             }else{
-                String tips = "与对方连接失败，无法开始通话！";
-                 Toast.makeText(activity, tips , Toast.LENGTH_SHORT).show();
+                closeMic = true;
+                if(connected){
+                    String tips = "对方已静音";
+                    Toast.makeText(activity, tips , Toast.LENGTH_SHORT).show();    
+                }
+                
             }
             
         }
@@ -333,7 +355,10 @@ public class AudioActivity extends Activity  {
             
         }*/
         private void controltips(){
-            new Timer().scheduleAtFixedRate(new TimerTask() {
+            firstEnter = true;
+
+            mtimer = new Timer();
+            mtimer.scheduleAtFixedRate(new TimerTask() {
                 @Override
                 public void run() {
                       mParseSec--;
@@ -341,25 +366,32 @@ public class AudioActivity extends Activity  {
                       int mm = mParseSec / 60 ;
                       int ss = mParseSec % 60;
                       AudioActivity activity = mContext.get();
-                      if(mParseSec == 300){
-                          Toast.makeText(activity, "请注意，剩余用时小于5分钟！" , Toast.LENGTH_SHORT).show();
-                      }else if(mParseSec == 60){
-                          Toast.makeText(activity, "通话将在1分钟后结束！" , Toast.LENGTH_SHORT).show();
-                      }
-                      String showtext = "剩余时间："+String.format(Locale.ENGLISH,"%02d",mm)+":"+String.format(Locale.ENGLISH,"%02d",ss);
                       
-                    runOnUiThread(new TimerTask() {
-                        @Override
+                    runOnUiThread(new Runnable() {
+                        //@Override
                         public void run() {
-                             mExpireTime.setText(showtext);
+                            if(mParseSec == 300){
+                                Toast.makeText(activity, "通话时间剩余5分钟" , Toast.LENGTH_SHORT).show();
+                            }else if(mParseSec == 60){
+                                connected = false;
+                                Toast.makeText(activity, "通话时间剩余1分钟" , Toast.LENGTH_SHORT).show();
+                            }
+                            String showtext = "剩余时间："+String.format(Locale.ENGLISH,"%02d",mm)+":"+String.format(Locale.ENGLISH,"%02d",ss);
+                              
+                            mExpireTime.setText(showtext);
+                            if(mParseSec <= 0){
+                                mExpireTime.setText("剩余时间为0，结束通话！");
+                            }
                         }
                     });
-                    if (mParseSec < 0) {
-                          stopTRTC();
-                          cancel();
-                      }
+                    if (mParseSec <= 0) {
+                      //mExpireTime.setText("剩余时间为0，结束通话！");
+                      //mTRTCCloud.stopLocalAudio();
+                      exitRoom();
+                      mtimer.cancel();
+                    }
                 }
-            }, 0, 1000);
+            }, 1000, 1000);
             
         }
 

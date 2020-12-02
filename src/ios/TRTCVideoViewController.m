@@ -4,14 +4,14 @@
 
 @implementation TRTCVideoViewController
 
--(void)viewWillAppear:(BOOL)animated{
+/*-(void)viewWillAppear:(BOOL)animated{
   NSLog(@"viewWillAppear");
 }
 
 -(void)viewWillDissappear:(BOOL)animated{
 
      [[NSNotificationCenter defaultCenter] postNotificationName:@"Vviewsdissappear" object:nil];
-}
+}*/
 /**
  * 检查当前APP是否已经获得摄像头和麦克风权限，没有获取边提示用户开启权限
  */
@@ -65,7 +65,9 @@
     _mainViewUserId = @"";
     _toastMsgCount = 0;
     _toastMsgHeight = 0;
-    
+    _firstenter = NO;
+    _connected = YES;
+    _closeCamera = NO;
     // 初始化 UI 控件
     [self initUI];
     
@@ -217,6 +219,7 @@
         if ([self->_mainViewUserId isEqual:@""] || [self->_mainViewUserId isEqual:self->_selfUserID]){
 	    	
             self->_localView.frame = CGRectMake(0, 0, size.width, size.height);
+            
 	    }else{
             self->_remoteView.frame = CGRectMake(0, 0, size.width, size.height);
             self->_localView.frame = CGRectMake(size.width-smallVideoW-10,30,smallVideoW,smallVideoH);
@@ -271,7 +274,7 @@
     //
     [_trtc startLocalPreview:true view:_localView];
     
-    [self toastTip:@"开始进房"];
+    //[self toastTip:@"开始进房"];
     NSLog(@"enterroom in VC:%@",self.param);
     // 进房
     [_trtc enterRoom:self.param appScene:TRTCAppSceneVideoCall];
@@ -284,7 +287,8 @@
  */
 - (void)exitRoom {
     
-   
+    [self dismissViewControllerAnimated:true completion:nil];
+
     [_trtc exitRoom];
     
 	[self setRoomStatus:TRTC_IDLE];
@@ -313,20 +317,27 @@
  * 打开或关闭本地视频上行
  */
 - (void)clickVideoMute {
-    _videoMuted = !_videoMuted;
+    if(!_closeCamera){
+        _videoMuted = !_videoMuted;
     
-    [_btnVideoMute setImage:[UIImage imageNamed:(_videoMuted ? @"rtc_camera_off" : @"rtc_camera_on")] forState:UIControlStateNormal];
-    
-    if (_videoMuted) {
-        //        [_trtc stopLocalPreview];
-        [self stopPreview];
-    }
-    else {
-        //        [_trtc startLocalPreview:YES view:_localView];
-        [self startPreview];
+        [_btnVideoMute setImage:[UIImage imageNamed:(_videoMuted ? @"rtc_camera_off" : @"rtc_camera_on")] forState:UIControlStateNormal];
         
+        if (_videoMuted) {
+            //        [_trtc stopLocalPreview];
+            [self.view exchangeSubviewAtIndex:0 withSubviewAtIndex:1];
+            [self stopPreview];
+        }
+        else {
+            //        [_trtc startLocalPreview:YES view:_localView];
+            [self.view exchangeSubviewAtIndex:0 withSubviewAtIndex:1];
+            [self startPreview];
+            
+        }
+        [_trtc muteLocalVideo:_videoMuted];
+    }else{
+        [self toastTip:@"无法双方均关闭摄像头"];
     }
-    [_trtc muteLocalVideo:_videoMuted];
+    
 }
 
 
@@ -334,10 +345,15 @@
  * 点击关闭或者打开本地的音频上行
  */
 - (void)clickMute {
-    _muteSwitch = !_muteSwitch;
-    [_trtc muteLocalAudio:_muteSwitch];
-    [_btnAudioMute setImage:[UIImage imageNamed:(_muteSwitch ? @"rtc_mic_off" : @"rtc_mic_on")] forState:UIControlStateNormal];
-}
+    if(_closeMic){
+        [self toastTip:@"无法双方均关闭麦克风"];
+    }else{
+        _muteSwitch = !_muteSwitch;
+        [_trtc muteLocalAudio:_muteSwitch];
+        [_btnAudioMute setImage:[UIImage imageNamed:(_muteSwitch ? @"rtc_mic_off" : @"rtc_mic_on")] forState:UIControlStateNormal];
+ 
+    }
+   }
 
 /*
 */
@@ -351,7 +367,8 @@
     if (self.onHangUp != nil) {
         self.onHangUp();
     }
-    [self dismissViewControllerAnimated:true completion:nil];
+    [self exitRoom];
+    
 }
 
 
@@ -379,7 +396,7 @@
 
 - (void)onEnterRoom:(NSInteger)result {
     if (result >= 0) {
-        NSString *msg = [NSString stringWithFormat:@"[%@]进房成功[%@]: elapsed[%ld]", _selfUserID, _roomID, (long)result];
+        NSString *msg = [NSString stringWithFormat:@"欢迎来到咨询室"];
         [self toastTip:msg];
         [self setRoomStatus:TRTC_ENTERED];
         
@@ -387,14 +404,24 @@
     else {
         //[self exitRoom];
         
-        NSString *msg = [NSString stringWithFormat:@"进房失败: [%ld]", (long)result];
+        NSString *msg = [NSString stringWithFormat:@"进入咨询室失败: [%ld]", (long)result];
         [self toastTip:msg];
     }
 }
 
+-(void)onRemoteUserEnterRoom:(NSString *)userId{
+    NSString *msg = [NSString stringWithFormat:@"对方进入咨询室"];
+    [self toastTip:msg];
+    
+}
+-(void)onRemoteUserLeaveRoom:(NSString *)userId reason:(NSInteger)reason{
+    NSString *msg = [NSString stringWithFormat:@"对方离开咨询室"];
+    [self toastTip:msg];
+    
+}
 
 - (void)onExitRoom:(NSInteger)reason {
-    NSString *msg = [NSString stringWithFormat:@"离开房间[%@]: reason[%ld]", _roomID, (long)reason];
+    NSString *msg = [NSString stringWithFormat:@"离开咨询室"];
     [self toastTip:msg];
 }
 
@@ -403,6 +430,11 @@
 - (void)onUserAudioAvailable:(NSString *)userId available:(BOOL)available
 {
     NSLog(@"onUserAudioAvailable:userId:%@ alailable:%u", userId, available);
+    if(available){
+        _closeMic = NO;
+    }else{
+        _closeMic = YES;
+    }
     
 }
 
@@ -412,15 +444,25 @@
 
     if (available) {
         // 启动远程画面的解码和显示逻辑，FillMode 可以设置是否显示黑边
+        _closeCamera = NO;
         _mainViewUserId = userId;
         
        // [self.view addSubview:_remoteView];
        // [_localView sendSubviewToBack:_remoteView];
         [_trtc startRemoteView:userId view:_remoteView];
         [self relayout];
-        [self updateTips];
+        if(!_firstenter){
+            [self updateTips];    
+        }
+        
     }
     else {
+        if(_connected){
+            [self toastTip:@"对方已关闭摄像头"];    
+        }
+        _closeCamera = YES;
+        _mainViewUserId = _selfUserID;
+        [self relayout];
         [_trtc stopRemoteView:userId];
     }
         
@@ -431,6 +473,7 @@
 }
 
 -(void)updateTips{
+    self->_firstenter = YES;
     __block int timeout = self.totaltime; //倒计时时间
     dispatch_queue_t queue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0);
     dispatch_source_t _timer = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0,queue);
@@ -442,12 +485,21 @@
                 dispatch_async(dispatch_get_main_queue(), ^{
                     //设置界面的按钮显示 根据自己需求设置
                     self->_expireTimeLabel.text=@"通话时间为0，结束通话！";
+                    [self clickBack];
                 });
+                //[self stopPreview];
         }else{
             int minutes = timeout / 60;
             int seconds = timeout % 60;
             NSString *strTime = [NSString stringWithFormat:@"剩余时间：%02d:%02d",minutes, seconds];
             dispatch_async(dispatch_get_main_queue(), ^{
+                if(timeout == 300){
+                    [self toastTip:@"通话时间剩余5分钟"];
+                }
+                if(timeout == 60){
+                    [self toastTip:@"通话时间剩余1分钟"];
+                    self->_connected = NO;
+                }
                 //设置界面的按钮显示 根据自己需求设置
                 self->_expireTimeLabel.text = strTime;
             });

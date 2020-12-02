@@ -7,6 +7,7 @@ import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
 import android.view.Window;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -78,6 +79,11 @@ public class RTCActivity extends Activity  {
     private String                          endTime;
     private String                          errorMsg;
     private boolean                         exchancepreview;
+    private boolean                         firstEnter;
+    private boolean                         connected;
+    private boolean                         closeCamera;
+    private boolean                         closeMic;
+    private Timer                           mtimer;
     
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -86,9 +92,12 @@ public class RTCActivity extends Activity  {
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         setContentView(wwaretrtc.getResourceId("activity_rtc","layout"));
         //getSupportActionBar().hide(); //work on AppCompatActivity
-        
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON); 
         handleIntent();
         exchancepreview = false;
+        connected = true;
+        closeCamera = false;
+        closeMic = false;
         // 进入房间代表之前申请过权限
         initView();
         enterRoom();
@@ -137,43 +146,35 @@ public class RTCActivity extends Activity  {
             String tmpstr = mUsername+"的咨询室";
             mTitleText.setText(tmpstr);
         }*/
-        mBackButton.setOnClickListener(new View.OnClickListener(){
-          @Override
-          public void onClick(View view){
-            //exitRoom();
-            //Log.i(TAG,"clickback call finsih================");
-            finish();
-            //Toast.makeText((RTCActivity)this,"test",Toast.LENGTH_SHORT).show();
-          }
+
+        mBackButton.setOnClickListener(view -> {
+            exitRoom();
           });
 
-        mMuteVideo.setOnClickListener(new View.OnClickListener(){
-          @Override
-          public void onClick(View v){
-            muteVideo();
-            //Toast.makeText(this,"test",Toast.LENGTH_SHORT).show();}
-          }
+        mMuteVideo.setOnClickListener(view ->{
+          if(closeCamera){
+                Toast.makeText(this,"无法双方均关闭摄像头",Toast.LENGTH_SHORT).show();
+            }else{
+                muteVideo();
+            }
         });
-        mMuteAudio.setOnClickListener(new View.OnClickListener(){
-          @Override
-          public void onClick(View v){
-            muteAudio();
-            //Toast.makeText(this,"test",Toast.LENGTH_SHORT).show();}
-          }
+        mMuteAudio.setOnClickListener(view ->{
+          if(closeMic){
+                Toast.makeText(this,"无法双方均关闭麦克风",Toast.LENGTH_SHORT).show();
+            }else{
+               muteAudio(); 
+            }
         });
         
-        mHandfree.setOnClickListener(new View.OnClickListener(){
-          @Override
-          public void onClick(View v){
-            handfree();
-          }
+        mHandfree.setOnClickListener(view ->{
+          handfree();
         });
 
         /*mSwitchCamera.setOnClickListener(new View.OnClickListener(){
           @Override
           public void onClick(View v){
             switchCamera();
-            //Toast.makeText(this,"test",Toast.LENGTH_SHORT).show();}
+            //Toast.makeText(this,"test",Toast.LENGTH_SHORT).show();
           }
         });*/
         //mLogInfo.setOnClickListener(this);
@@ -233,9 +234,11 @@ public class RTCActivity extends Activity  {
     }
     @Override
     protected void onDestroy() {
+        mtimer.cancel();
         super.onDestroy();
-        Log.i(TAG,"clickback call onDestroy================");
-        exitRoom();
+        //Log.i(TAG,"clickback call onDestroy================");
+        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        //exitRoom();
     }
     /*
     * 中断本地推送及远程接收
@@ -268,7 +271,7 @@ public class RTCActivity extends Activity  {
         }
         mTRTCCloud = null;
         TRTCCloud.destroySharedInstance();
-        //finish();
+        finish();
     }
     /*@Override
     public void onClick(View v) {
@@ -307,16 +310,15 @@ public class RTCActivity extends Activity  {
         if (!isSelected) {
             mTRTCCloud.stopLocalPreview();
             mMuteVideo.setBackground(getDrawable(wwaretrtc.getResourceId("rtc_camera_off","mipmap")));
-            mVideoMutedTipsView.setVisibility(View.VISIBLE);
+            //mVideoMutedTipsView.setVisibility(View.VISIBLE);
         } else {
             if(exchancepreview){
                 mTRTCCloud.startLocalPreview(mIsFrontCamera,mRemoteViewList.get(0));
             }else{
                 mTRTCCloud.startLocalPreview(mIsFrontCamera, mLocalPreviewView);
             }
-            
-            //mMuteVideo.setBackground(getDrawable(wwaretrtc.getResourceId("rtc_camera_on","mipmap")));
-            mVideoMutedTipsView.setVisibility(View.GONE);
+            mMuteVideo.setBackground(getDrawable(wwaretrtc.getResourceId("rtc_camera_on","mipmap")));
+            //mVideoMutedTipsView.setVisibility(View.GONE);
         }
         mMuteVideo.setSelected(!isSelected);
     }
@@ -379,6 +381,14 @@ public class RTCActivity extends Activity  {
             Toast.makeText(activity, "对方已退出咨询室！" , Toast.LENGTH_SHORT).show();
           }
         } 
+        @Override 
+        public void onUserAudioAvailable(String userId, boolean available){
+            if(available){
+                closeMic = false;
+            }else{
+                closeMic = true;
+            }
+        }
 
         @Override
         public void onUserVideoAvailable(String userId, boolean available) {
@@ -386,6 +396,7 @@ public class RTCActivity extends Activity  {
             int index = mRemoteUidList.indexOf(userId);
 
             if (available) {
+                closeCamera = false;
                 if (index != -1) { //如果mRemoteUidList有，就不重复添加
                     return;
                 }
@@ -394,8 +405,16 @@ public class RTCActivity extends Activity  {
                 mCountText.setVisibility(View.VISIBLE);
                 mRemoteUidList.add(userId);
                 refreshRemoteVideoViews();
-                controltips();
+                if(!firstEnter){
+                    controltips();
+                }
             } else {
+                RTCActivity activity = mContext.get();
+                if(connected){
+                    String tips = "对方已关闭摄像头";
+                    Toast.makeText(activity, tips , Toast.LENGTH_SHORT).show();
+                }
+                closeCamera = true;
                 if (index == -1) { //如果mRemoteUidList没有，说明已关闭画面
                     return;
                 }
@@ -427,8 +446,9 @@ public class RTCActivity extends Activity  {
             }
         }
         private void controltips(){
-
-            new Timer().scheduleAtFixedRate(new TimerTask() {
+            firstEnter = true;
+            mtimer = new Timer();
+            mtimer.scheduleAtFixedRate(new TimerTask() {
                 @Override
                 public void run() {
                       mParseSec--;
@@ -436,25 +456,32 @@ public class RTCActivity extends Activity  {
                       int mm = mParseSec / 60 ;
                       int ss = mParseSec % 60;
                       RTCActivity activity = mContext.get();
-                      if(mParseSec == 300){
-                          Toast.makeText(activity, "请注意，剩余用时小于5分钟！" , Toast.LENGTH_SHORT).show();
-                      }else if(mParseSec == 60){
-                          Toast.makeText(activity, "通话将在1分钟后结束！" , Toast.LENGTH_SHORT).show();
-                      }
-                      String showtext = "剩余时间："+String.format(Locale.ENGLISH,"%02d",mm)+":"+String.format(Locale.ENGLISH,"%02d",ss);
                       
-                    runOnUiThread(new TimerTask() {
+                    runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
-                             mCountText.setText(showtext);
+                            if(mParseSec == 300){
+                                Toast.makeText(activity, "通话时间剩余5分钟" , Toast.LENGTH_SHORT).show();
+                            }else if(mParseSec == 60){
+                                connected = false;
+                                Toast.makeText(activity, "通话时间剩余1分钟" , Toast.LENGTH_SHORT).show();
+                            }
+                            String showtext = "剩余时间："+String.format(Locale.ENGLISH,"%02d",mm)+":"+String.format(Locale.ENGLISH,"%02d",ss);
+                              
+                            mCountText.setText(showtext);
+                            if(mParseSec <= 0 ){
+                                mCountText.setText("剩余时间为0，结束通话！");
+                            }
                         }
                     });
                     if (mParseSec < 0) {
-                          stopTRTC();
-                          cancel();
-                      }
+                        exitRoom();
+                        //mTRTCCloud.stopLocalAudio();
+                        //mTRTCCloud.stopLocalPreview(); 
+                        mtimer.cancel();
+                    }
                 }
-            }, 0, 1000);
+            }, 1000, 1000);
           
         }
         // 错误通知监听，错误通知意味着 SDK 不能继续运行
