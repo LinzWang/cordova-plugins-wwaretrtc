@@ -56,7 +56,7 @@
     param.userId = (NSString*)[data objectForKey: @"userid"];
     param.roomId = (UInt32)[(NSString*)[data objectForKey: @"roomid"] intValue];
     NSString *paramUsersig = [data objectForKey: @"usersig"];
-    int totaltime=[[data objectForKey: @"estimatetime"] intValue]*60;
+    int totaltime=[[data objectForKey: @"estimatetime"] intValue];
     NSString *roomtype = [data objectForKey:@"roomtype"];
 
     if(paramUsersig != nil && paramUsersig.length>0){

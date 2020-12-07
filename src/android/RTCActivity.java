@@ -124,7 +124,7 @@ public class RTCActivity extends Activity  {
             }
             if(intent.getStringExtra("estimateTime") != null){
               mEstimateTime = intent.getStringExtra("estimateTime");
-              mParseSec = Integer.parseInt(mEstimateTime)*60;
+              mParseSec = Integer.parseInt(mEstimateTime);
             }
         }
     }
@@ -141,7 +141,10 @@ public class RTCActivity extends Activity  {
         //mLogInfo            = findViewById(wwaretrtc.getResourceId("trtc_btn_log_info","id"));
         mVideoMutedTipsView = findViewById(wwaretrtc.getResourceId("ll_trtc_mute_video_default","id"));
         //mRemoteView         = findViewById(wwaretrtc.getResourceId("trtc_tc_cloud_view_1","id"));
-        mCountText.setText("剩余时间："+mEstimateTime+":00");
+        //修改mEstimateTime为秒
+        int cmm = mParseSec / 60 ;
+        int css = mParseSec % 60;
+        mCountText.setText("剩余时间："+String.format(Locale.ENGLISH,"%02d",cmm)+":"+String.format(Locale.ENGLISH,"%02d",css));
         /*if (!TextUtils.isEmpty(mUsername)) {
             String tmpstr = mUsername+"的咨询室";
             mTitleText.setText(tmpstr);
@@ -234,7 +237,10 @@ public class RTCActivity extends Activity  {
     }
     @Override
     protected void onDestroy() {
-        mtimer.cancel();
+        if(mtimer != null){
+            mtimer.cancel();
+            mtimer = null;
+        }
         super.onDestroy();
         //Log.i(TAG,"clickback call onDestroy================");
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
@@ -479,6 +485,7 @@ public class RTCActivity extends Activity  {
                         //mTRTCCloud.stopLocalAudio();
                         //mTRTCCloud.stopLocalPreview(); 
                         mtimer.cancel();
+                        mtimer = null;
                     }
                 }
             }, 1000, 1000);

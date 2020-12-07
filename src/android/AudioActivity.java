@@ -112,7 +112,7 @@ public class AudioActivity extends Activity  {
             }
             if(intent.getStringExtra("estimateTime") != null){
                 mEstimateTime = intent.getStringExtra("estimateTime");
-                mParseSec = Integer.parseInt(mEstimateTime)*60;
+                mParseSec = Integer.parseInt(mEstimateTime);
             }
             if(intent.getStringExtra("guestImg") != null){
                 mGuestImg = intent.getStringExtra("guestImg");
@@ -138,7 +138,9 @@ public class AudioActivity extends Activity  {
         mExpireTime         = findViewById(wwaretrtc.getResourceId("expire_time_show","id"));
 
         mTips.setVisibility(View.GONE);
-        mExpireTime.setText("剩余时间："+mEstimateTime+":00");
+        int cmm = mParseSec / 60 ;
+        int css = mParseSec % 60;
+        mExpireTime.setText("剩余时间："+String.format(Locale.ENGLISH,"%02d",cmm)+":"+String.format(Locale.ENGLISH,"%02d",css));
         /*if (!TextUtils.isEmpty(mUsername)) {
             String tmpstr = mUsername+"的咨询室";
             mTitleText.setText(tmpstr);
@@ -199,7 +201,11 @@ public class AudioActivity extends Activity  {
     }
     @Override
     protected void onDestroy() {
-        mtimer.cancel();
+        if(mtimer != null){
+            mtimer.cancel();
+            mtimer = null;    
+        }
+        
         super.onDestroy();
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         //exitRoom();
@@ -389,6 +395,7 @@ public class AudioActivity extends Activity  {
                       //mTRTCCloud.stopLocalAudio();
                       exitRoom();
                       mtimer.cancel();
+                      mtimer = null;
                     }
                 }
             }, 1000, 1000);
