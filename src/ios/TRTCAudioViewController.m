@@ -408,7 +408,9 @@
         NSString *msg = [NSString stringWithFormat:@"欢迎来到咨询室"];
         [self toastTip:msg];
         [self setRoomStatus:TRTC_ENTERED];
-        
+        if(!_firstenter){
+            [self updateTips];
+        } 
     }
     else {
         //[self exitRoom];
@@ -419,12 +421,12 @@
 }
 
 -(void)onRemoteUserEnterRoom:(NSString *)userId{
-    NSString *msg = [NSString stringWithFormat:@"对方进入咨询室", userId];
+    NSString *msg = [NSString stringWithFormat:@"对方进入咨询室"];
     [self toastTip:msg];
     
 }
 -(void)onRemoteUserLeaveRoom:(NSString *)userId reason:(NSInteger)reason{
-    NSString *msg = [NSString stringWithFormat:@"对方离开咨询室", userId];
+    NSString *msg = [NSString stringWithFormat:@"对方离开咨询室"];
     [self toastTip:msg];
     
 }
@@ -448,9 +450,7 @@
        // [_localView sendSubviewToBack:_remoteView];
         //[_trtc startRemoteView:userId view:_remoteView];
         //[self relayout];
-       if(!_firstenter){
-         [self updateTips];
-       } 
+       
     }
     else {
         //[_trtc stopRemoteView:userId];

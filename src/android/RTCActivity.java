@@ -364,17 +364,23 @@ public class RTCActivity extends Activity  {
         }
         @Override
         public void onEnterRoom(long result){
-          RTCActivity activity = mContext.get();
-          if(result > 0){
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS");
+            startTime = sdf.format(new Date());
+            mCountText.setVisibility(View.VISIBLE);
+            RTCActivity activity = mContext.get();
+            if(result > 0){
+                if(!firstEnter){
+                    controltips();
+                }
             Toast.makeText(activity, "欢迎来到咨询室！" , Toast.LENGTH_SHORT).show();
           }
         }
 
         @Override
         public void onRemoteUserEnterRoom(String userId){
-          RTCActivity activity = mContext.get();
-
-          Toast.makeText(activity, "对方进入咨询室，即将开始通话！" , Toast.LENGTH_SHORT).show();
+            RTCActivity activity = mContext.get();
+            
+            Toast.makeText(activity, "对方进入咨询室，即将开始通话！" , Toast.LENGTH_SHORT).show();
 
         }
 
@@ -406,14 +412,10 @@ public class RTCActivity extends Activity  {
                 if (index != -1) { //如果mRemoteUidList有，就不重复添加
                     return;
                 }
-                SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS");
-                startTime = sdf.format(new Date());
-                mCountText.setVisibility(View.VISIBLE);
+                
                 mRemoteUidList.add(userId);
                 refreshRemoteVideoViews();
-                if(!firstEnter){
-                    controltips();
-                }
+                
             } else {
                 RTCActivity activity = mContext.get();
                 if(connected){

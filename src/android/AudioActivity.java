@@ -300,8 +300,13 @@ public class AudioActivity extends Activity  {
         public void onEnterRoom(long result){
             //String tips = "等待对方进入咨询室";
             //mTips.setText(tips);
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS");
+            startTime = sdf.format(new Date());
             AudioActivity activity = mContext.get();
           if(result > 0){
+            if(!firstEnter){
+                controltips();
+            }
             Toast.makeText(activity, "欢迎来到咨询室！" , Toast.LENGTH_SHORT).show();
           }
         }
@@ -340,11 +345,7 @@ public class AudioActivity extends Activity  {
             if(avaliable){
                 closeMic = false;
                 mTips.setVisibility(View.GONE);
-                SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS");
-                startTime = sdf.format(new Date());
-                if(!firstEnter){
-                    controltips();
-                }
+                
             }else{
                 closeMic = true;
                 if(connected){
