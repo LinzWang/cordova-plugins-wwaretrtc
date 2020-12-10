@@ -74,7 +74,7 @@ public class AudioActivity extends Activity  {
     private String                          errorMsg;
     private boolean                         firstEnter;
     private boolean                         connected;
-    private boolean                         closeMic;
+    private String                          closeMic;
     private Timer                           mtimer;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -86,6 +86,7 @@ public class AudioActivity extends Activity  {
         handleIntent();
         firstEnter = false;
         connected = true;
+        closeMic = "";
         // 进入房间代表之前申请过权限
         initView();
         enterRoom();
@@ -147,7 +148,9 @@ public class AudioActivity extends Activity  {
         }
         */
         mNickName.setText(mGuestName);
-
+        mMuteAudio.setVisibility(View.INVISIBLE);
+            //mMuteVideo.setVisibility(View.VISIBLE);
+        mHandfree.setVisibility(View.INVISIBLE);
         Glide.with(this).load(mGuestImg).into(mHeadPicture);
         Activity that = this;
         mBackButton.setOnClickListener(view -> {
@@ -156,7 +159,7 @@ public class AudioActivity extends Activity  {
             //Toast.makeText((RTCActivity)this,"test",Toast.LENGTH_SHORT).show();
         });
         mMuteAudio.setOnClickListener(view -> {
-            if(closeMic){
+            if(closeMic.equals("remote")){
                 Toast.makeText(this,"无法双方均关闭麦克风",Toast.LENGTH_SHORT).show();
             }else{
               muteAudio();  
@@ -273,10 +276,12 @@ public class AudioActivity extends Activity  {
     private void muteAudio() {
         boolean isSelected = mMuteAudio.isSelected();
         if (!isSelected) {
-            mTRTCCloud.stopLocalAudio();
+            closeMic = "self";
+            mTRTCCloud.muteLocalAudio(true);
             mMuteAudio.setBackground(getDrawable(wwaretrtc.getResourceId("rtc_mic_off","mipmap")));
         } else {
-            mTRTCCloud.startLocalAudio();
+            closeMic = "";
+            mTRTCCloud.muteLocalAudio(false);
             mMuteAudio.setBackground(getDrawable(wwaretrtc.getResourceId("rtc_mic_on","mipmap")));
         }
         mMuteAudio.setSelected(!isSelected);
@@ -315,9 +320,11 @@ public class AudioActivity extends Activity  {
         public void onRemoteUserEnterRoom(String userId){
             //String tips = "对方进入咨询室，即将开始通话！";
             //mTips.setText(tips);
-          AudioActivity activity = mContext.get();
-          
-          Toast.makeText(activity, "对方进入咨询室，即将开始通话！" , Toast.LENGTH_SHORT).show();
+            AudioActivity activity = mContext.get();
+            mMuteAudio.setVisibility(View.VISIBLE);
+            //mMuteVideo.setVisibility(View.VISIBLE);
+            mHandfree.setVisibility(View.VISIBLE);
+            Toast.makeText(activity, "对方进入咨询室，即将开始通话！" , Toast.LENGTH_SHORT).show();
          
         }
 
@@ -333,8 +340,15 @@ public class AudioActivity extends Activity  {
             AudioActivity activity = mContext.get();
             
             Toast.makeText(activity, tips , Toast.LENGTH_SHORT).show();
-                        
+            mMuteAudio.setVisibility(View.INVISIBLE);
+            mHandfree.setVisibility(View.INVISIBLE);
+            if(closeMic.equals("self")){
+                muteAudio();          
+            }
+            if(closeMic.equals("remote")){
+                closeMic = "";
               //Log.i(TAG,"AUDIOLOGTEST:onRemoteUserLeaveRoom");
+            }
         }
         @Override
         public void onUserAudioAvailable(String userId, boolean avaliable) {
@@ -343,11 +357,11 @@ public class AudioActivity extends Activity  {
             AudioActivity activity = mContext.get();
                
             if(avaliable){
-                closeMic = false;
+                closeMic = "";
                 mTips.setVisibility(View.GONE);
                 
             }else{
-                closeMic = true;
+                closeMic = "remote";
                 if(connected){
                     String tips = "对方已静音";
                     Toast.makeText(activity, tips , Toast.LENGTH_SHORT).show();    

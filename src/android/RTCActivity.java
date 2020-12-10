@@ -81,8 +81,8 @@ public class RTCActivity extends Activity  {
     private boolean                         exchancepreview;
     private boolean                         firstEnter;
     private boolean                         connected;
-    private boolean                         closeCamera;
-    private boolean                         closeMic;
+    private String                         closeCamera;
+    private String                         closeMic;
     private Timer                           mtimer;
     
     @Override
@@ -96,8 +96,8 @@ public class RTCActivity extends Activity  {
         handleIntent();
         exchancepreview = false;
         connected = true;
-        closeCamera = false;
-        closeMic = false;
+        closeCamera = "";
+        closeMic = "";
         // 进入房间代表之前申请过权限
         initView();
         enterRoom();
@@ -149,20 +149,22 @@ public class RTCActivity extends Activity  {
             String tmpstr = mUsername+"的咨询室";
             mTitleText.setText(tmpstr);
         }*/
-
+        mMuteAudio.setVisibility(View.INVISIBLE);
+        mMuteVideo.setVisibility(View.INVISIBLE);
+        mHandfree.setVisibility(View.INVISIBLE);
         mBackButton.setOnClickListener(view -> {
             exitRoom();
           });
 
         mMuteVideo.setOnClickListener(view ->{
-          if(closeCamera){
+          if(closeCamera.equals("remote")){
                 Toast.makeText(this,"无法双方均关闭摄像头",Toast.LENGTH_SHORT).show();
             }else{
                 muteVideo();
             }
         });
         mMuteAudio.setOnClickListener(view ->{
-          if(closeMic){
+          if(closeMic.equals("remote")){
                 Toast.makeText(this,"无法双方均关闭麦克风",Toast.LENGTH_SHORT).show();
             }else{
                muteAudio(); 
@@ -314,10 +316,14 @@ public class RTCActivity extends Activity  {
     private void muteVideo() {
         boolean isSelected = mMuteVideo.isSelected();
         if (!isSelected) {
+            closeCamera = "self";
+            mTRTCCloud.muteLocalVideo(true);
             mTRTCCloud.stopLocalPreview();
             mMuteVideo.setBackground(getDrawable(wwaretrtc.getResourceId("rtc_camera_off","mipmap")));
             //mVideoMutedTipsView.setVisibility(View.VISIBLE);
         } else {
+            closeCamera = "";
+            mTRTCCloud.muteLocalVideo(false);
             if(exchancepreview){
                 mTRTCCloud.startLocalPreview(mIsFrontCamera,mRemoteViewList.get(0));
             }else{
@@ -332,11 +338,12 @@ public class RTCActivity extends Activity  {
     private void muteAudio() {
         boolean isSelected = mMuteAudio.isSelected();
         if (!isSelected) {
-            mTRTCCloud.stopLocalAudio();
-
+            closeMic = "self";
+            mTRTCCloud.muteLocalAudio(true);
             mMuteAudio.setBackground(getDrawable(wwaretrtc.getResourceId("rtc_mic_off","mipmap")));
         } else {
-            mTRTCCloud.startLocalAudio();
+            closeMic = "";
+            mTRTCCloud.muteLocalAudio(false);
             mMuteAudio.setBackground(getDrawable(wwaretrtc.getResourceId("rtc_mic_on","mipmap")));
         }
         mMuteAudio.setSelected(!isSelected);
@@ -379,7 +386,9 @@ public class RTCActivity extends Activity  {
         @Override
         public void onRemoteUserEnterRoom(String userId){
             RTCActivity activity = mContext.get();
-            
+            mMuteAudio.setVisibility(View.VISIBLE);
+            mMuteVideo.setVisibility(View.VISIBLE);
+            mHandfree.setVisibility(View.VISIBLE);
             Toast.makeText(activity, "对方进入咨询室，即将开始通话！" , Toast.LENGTH_SHORT).show();
 
         }
@@ -392,13 +401,23 @@ public class RTCActivity extends Activity  {
           }else {
             Toast.makeText(activity, "对方已退出咨询室！" , Toast.LENGTH_SHORT).show();
           }
+          if(closeMic.equals("self")){
+            muteAudio();
+          }else if(closeMic.equals("remote")){
+            closeMic = "";
+          }
+          if(closeCamera.equals("self")){
+            muteVideo();
+          }else if(closeCamera.equals("remote")){
+            closeCamera ="";
+          }
         } 
         @Override 
         public void onUserAudioAvailable(String userId, boolean available){
             if(available){
-                closeMic = false;
+                closeMic = "";
             }else{
-                closeMic = true;
+                closeMic = "remote";
             }
         }
 
@@ -408,7 +427,7 @@ public class RTCActivity extends Activity  {
             int index = mRemoteUidList.indexOf(userId);
 
             if (available) {
-                closeCamera = false;
+                closeCamera = "";
                 if (index != -1) { //如果mRemoteUidList有，就不重复添加
                     return;
                 }
@@ -422,7 +441,7 @@ public class RTCActivity extends Activity  {
                     String tips = "对方已关闭摄像头";
                     Toast.makeText(activity, tips , Toast.LENGTH_SHORT).show();
                 }
-                closeCamera = true;
+                closeCamera = "remote";
                 if (index == -1) { //如果mRemoteUidList没有，说明已关闭画面
                     return;
                 }

@@ -97,14 +97,15 @@
     //_btnVideoMute = [self createBottomBtnIcon:@"rtc_camera_on" action:@selector(clickVideoMute)];
     
     _muteSwitch = NO;
-    _btnAudioMute = [self createBottomBtnIcon:@"rtc_mic_on" action:@selector(clickMute)];
     
+    _btnAudioMute = [self createBottomBtnIcon:@"rtc_mic_on" action:@selector(clickMute)];
+    _btnHandfree = [self createBottomBtnIcon:@"trtccalling_ic_handsfree_enable" action:@selector(clickHandfree)];
+    _btnAudioMute.hidden = YES;
+    _btnHandfree.hidden = YES;
     _showLogType = 0;
     //_btnLog = [self createBottomBtnIcon:@"rtc_log_button" action:@selector(clickLog)];
     
     _handfree = YES;
-    _btnHandfree = [self createBottomBtnIcon:@"trtccalling_ic_handsfree_enable" action:@selector(clickHandfree)];
-   
     _btnback = [self createBottomBtnIcon:@"back" action:@selector(clickBack)];
     
 
@@ -353,10 +354,13 @@
  * 点击关闭或者打开本地的音频上行
  */
 - (void)clickMute {
+
     if(_closeMic){
         [self toastTip:@"无法双方均关闭麦克风"];
     }else{
+
         _muteSwitch = !_muteSwitch;
+        //_selfCloseMic = _muteSwitch;
         [_trtc muteLocalAudio:_muteSwitch];
         [_btnAudioMute setImage:[UIImage imageNamed:(_muteSwitch ? @"rtc_mic_off" : @"rtc_mic_on")] forState:UIControlStateNormal];
       
@@ -421,6 +425,9 @@
 }
 
 -(void)onRemoteUserEnterRoom:(NSString *)userId{
+    _btnAudioMute.hidden = NO;
+    _btnHandfree.hidden = NO;
+    
     NSString *msg = [NSString stringWithFormat:@"对方进入咨询室"];
     [self toastTip:msg];
     
@@ -428,6 +435,10 @@
 -(void)onRemoteUserLeaveRoom:(NSString *)userId reason:(NSInteger)reason{
     NSString *msg = [NSString stringWithFormat:@"对方离开咨询室"];
     [self toastTip:msg];
+    _closeMic = NO;
+    if(_muteSwitch){
+        [self clickMute];
+    }
     
 }
 
